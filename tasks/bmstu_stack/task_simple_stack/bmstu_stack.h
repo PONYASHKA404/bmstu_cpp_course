@@ -9,126 +9,82 @@ namespace bmstu
 template <typename T>
 class stack
 {
-	public:
-	stack() : data_stack(nullptr), size_stack(0), capacity_stack(0) {} //создаём пустой стэк, не выделяем память
+   public:
+	stack() : data_(nullptr), size_(0) {} //создаём пустой стек
 
-	bool empty() const noexcept { return size_stack == 0; } // проверяем пустой ли стэк
+	bool empty() const noexcept { return size_ == 0; } // проверяем пустой ли стек, noexcept
 
-	size_t size() const noexcept { return size_stack; } // проверка размера стэка
+	size_t size() const noexcept { return size_; } // проверка размера стека, size_t - целочисленный тип данных
 
-	~stack() { //диструктор
-		clear();
-		::operator delete(data_stack); //очищаем память без вызова диструктора
+	~stack() 
+	{ //диструктор
+		for (size_t i = 0; i < size_; i++) 
+			data_[i].~T();
+		::operator delete(data_); //очищаем память без вызова диструктора
 	}
 
-	template <typename... Args>
-	void emplace(Args&&... args) {
-		if (size_stack == capacity_stack) { //проверяем можем ли мы добавить элемент в текущий стэк
-			//увеличиваем capacity
-			size_t new_capacity_stack = 0;
-			if (capacity_stack == 0) { 
-				new_capacity_stack = 1;
-			} 
-			else {
-				new_capacity_stack = capacity_stack + 1;
-			}
-		T* new_data_stack = (T*)::operator new(new_capacity_stack * sizeof(T)); //создаём новый массив
-		for (size_t i = 0; i < size_stack; ++i) { // перемещаем все элементы в новый массив
-			new (new_data_stack + i) T(std::move(data_stack[i])); //перемещение
-			(data_stack + i)->~T(); //удаление старых эл. в data_stack
-		}
-		::operator delete(data_stack); //удаление указателя
-
-		data_stack = new_data_stack;
-		capacity_stack = new_capacity_stack;
-		}
-		new (data_stack + size_stack) T(std::forward<Args>(args)...);
-    	++size_stack;
+	template <typename... Args> //шаблон с переменным числом аргументов
+	void emplace(Args&&... args) 
+	{ // создание объекта в памяти без лишних копирований
+		better_stack_version();
+		new (data_ + size_) T(std::forward<Args>(args)...); //позволяет перемещать rvalue (временные объекты, не имеющие адреса в памяти, например: результат выражения) и копировать lvaluer
+		size_++;
   	}
 
-  // copy semantics (lvalue)
-  	void push(const T& value) {
-		if (size_stack == capacity_stack) { //проверяем можем ли мы добавить элемент в текущий стэк
-			//увеличиваем capacity
-			size_t new_capacity_stack = 0;
-			if (capacity_stack == 0) { 
-				new_capacity_stack = 1;
-			} 
-			else {
-				new_capacity_stack = capacity_stack + 1;
-			}
-			T* new_data_stack = (T*)::operator new(new_capacity_stack * sizeof(T)); //создаём новый массив
-			for (size_t i = 0; i < size_stack; ++i) { // перемещаем все элементы в новый массив
-				new (new_data_stack + i) T(std::move(data_stack[i])); //перемещение
-				(data_stack + i)->~T(); //удаление старых эл. в data_stack
-			}
-			::operator delete(data_stack); //удаление указателя
-
-			data_stack = new_data_stack;
-			capacity_stack = new_capacity_stack;
-		}
-		new (data_stack + size_stack) T(value); //с помощью конструктора для типа Т присваиваем сырой памяти value
-		++size_stack;
+	void push(T&& value) //в функцию передаётся ссылка на rvalue
+	{
+		better_stack_version();
+		new (data_ + size_) T(std::move(value));
+		size_++;
   	}
 
-  	// move semantics (rvalue)
-	void push(T&& value) {
-		if (size_stack == capacity_stack) { //проверяем можем ли мы добавить элемент в текущий стэк
-			//увеличиваем capacity
-			size_t new_capacity_stack = 0;
-			if (capacity_stack == 0) { 
-				new_capacity_stack = 1;
-			} 
-			else {
-				new_capacity_stack = capacity_stack + 1;
-			}
-			T* new_data_stack = (T*)::operator new(new_capacity_stack * sizeof(T)); //создаём новый массив
-			for (size_t i = 0; i < size_stack; ++i) { // перемещаем все элементы в новый массив
-				new (new_data_stack + i) T(std::move(data_stack[i])); //перемещение
-				(data_stack + i)->~T(); //удаление старых эл. в data_stack
-			}
-			::operator delete(data_stack); //удаление указателя
+	void push(const T& value) // в функци/ передаётся константная ссылка на lvalue
+	{
+		better_stack_version();
+		new (data_ + size_) T(value);
+		size_++;
+	}
+	void clear() noexcept { size_ = 0; }
 
-			data_stack = new_data_stack;
-			capacity_stack = new_capacity_stack;
+	void pop() 
+	{ // удаляем последний элемент
+		if (empty()) {
+			throw std::underflow_error("Тут пусто :("); //выдаём исключение, что стек пуст
 		}
-		new (data_stack + size_stack) T(std::move(value)); //с помощью move записываем новым элементом value
-		++size_stack;
-  	}
-
-	void clear() noexcept {
-		while (size_stack > 0) {
-			--size_stack; // уменьшаем переменную на 1
-			(data_stack + size_stack)->~T(); //удаляем каждый элемент стэка начиная с конца(data_stack - указатель на начало массива, ~T() - диструктор типа T)
-		}
+		size_--;
 	}
 
-	void pop() {
+	T& top() 
+	{ //возвращаем ссылку на последний элемент
+		if (empty()) {
+			throw std::underflow_error("Тут пусто :("); 
+		}
+		return data_[size_ - 1];
+	}
+
+	const T& top() const // второй const обозначает, что функция может использоваться только для чтения
+	{ // возвращаем ссылку на последний элемент, через неё нельзя будет изменить, полученный элемент
 		if (empty()) {
 			throw std::underflow_error("Stack is empty!");
 		}
-		--size_stack;
-		(data_stack + size_stack)->~T();
+		return data_[size_ - 1];
 	}
 
-	T& top() {
-		if (empty()) {
-			throw std::underflow_error("Stack is empty!");
+   private:
+	void better_stack_version() // выделяем новое место для стека большего размера
+	{
+		T* new_place_ = (T*)::operator new(sizeof(T) * (size_ + 1)); // кол-во байт типа данных на новый размер
+		for (size_t i = 0; i < size_; i++)
+		{ // перемещение объектов в новую версию стека
+			new (new_place_ + i) T(std::move(data_[i])); // определяем место и перемещаем в новый стек 
+			(data_ + i)->~T(); //уничтожаем объект в старом стеке
 		}
-		return data_stack[size_stack - 1];
+		::operator delete(data_); // очищаем старый стек
+		data_ = new_place_;
 	}
 
-	const T& top() const {
-		if (empty()) {
-			throw std::underflow_error("Stack is empty!");
-		}
-		return data_stack[size_stack - 1];
-	 }
-
-   	private:
-	T* data_stack; //указатель на начало стэка
-	size_t size_stack; //размер стэка
-	size_t capacity_stack; //максимальная ёмкость стэка
+	T* data_; //указатель на начало стэка
+	size_t size_; //размер стэка
 };
 }  // namespace bmstu
 
