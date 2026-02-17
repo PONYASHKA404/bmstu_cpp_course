@@ -102,7 +102,7 @@ TEST(StackTest, Emplace)
 
 	ASSERT_EQ(CountCopyMoveDefault::default_constructor_count, 2);
 	ASSERT_EQ(CountCopyMoveDefault::copy_constructor_count, 0);
-	ASSERT_EQ(CountCopyMoveDefault::move_constructor_count, 1);
+	ASSERT_EQ(CountCopyMoveDefault::move_constructor_count, 1);	 // 0
 	ASSERT_EQ(CountCopyMoveDefault::assignment_copy_count, 0);
 	ASSERT_EQ(CountCopyMoveDefault::assignment_move_count, 0);
 }
@@ -277,18 +277,18 @@ TEST(StackTest, OptimizationCheck)
 
 	s.emplace(1, 2, 3);
 	ASSERT_EQ(CountCopyMoveDefault::default_constructor_count, 2);
-	ASSERT_EQ(CountCopyMoveDefault::move_constructor_count, 2);
+	ASSERT_EQ(CountCopyMoveDefault::move_constructor_count, 2);	 // 1
 	ASSERT_EQ(CountCopyMoveDefault::copy_constructor_count, 0);
 
 	CountCopyMoveDefault obj;
 	s.push(obj);
 	ASSERT_EQ(CountCopyMoveDefault::default_constructor_count, 3);
 	ASSERT_EQ(CountCopyMoveDefault::copy_constructor_count, 1);
-	ASSERT_EQ(CountCopyMoveDefault::move_constructor_count, 4);
+	ASSERT_EQ(CountCopyMoveDefault::move_constructor_count, 4);	 // 1
 
 	s.push(CountCopyMoveDefault());
 	ASSERT_EQ(CountCopyMoveDefault::default_constructor_count, 4);
-	ASSERT_EQ(CountCopyMoveDefault::move_constructor_count, 8);
+	ASSERT_EQ(CountCopyMoveDefault::move_constructor_count, 8);	 // 2
 
 	ASSERT_EQ(s.size(), 4u);
 	ASSERT_EQ(CountCopyMoveDefault::assignment_copy_count, 0);
