@@ -12,32 +12,31 @@ class stack
    public:
 	stack() : tuta(nullptr), size_(0) {}
 
-	bool empty() const noexcept { return size_ == 0; }
+	bool empty() const { return size_ == 0; }
 
-	size_t size() const noexcept { return size_; }
+	size_t size() const { return size_; }
 
 	~stack() { clear(); }
 
-	template <typename... Args>	 // шаблон с переменным числом аргументов
+	template <typename... Args>
 	void emplace(Args&&... args)
 	{
 		tuta = new Case(tuta, std::forward<Args>(args)...);
-		size_++;
+		++size_;
 	}
 
-	void push(T&& value)  // в функцию передаётся ссылка на rvalue
+	void push(T&& value)
 	{
 		tuta = new Case(tuta, std::move(value));
-		size_++;
+		++size_;
 	}
 
-	void push(
-		const T& value)	 // в функцию передаётся константная ссылка на lvalue
+	void push(const T& value)
 	{
 		tuta = new Case(tuta, value);
-		size_++;
+		++size_;
 	}
-	void clear() noexcept
+	void clear()
 	{
 		while (!empty())
 		{
@@ -54,7 +53,7 @@ class stack
 		Case* temp = tuta;
 		tuta = tuta->next;
 		delete temp;
-		size_--;
+		--size_;
 	}
 
 	T& top()
@@ -66,10 +65,8 @@ class stack
 		return tuta->shtuki;
 	}
 
-	const T& top() const  // второй const обозначает, что функция может
-						  // использоваться только для чтения
-	{  // возвращаем ссылку на последний элемент, через неё нельзя будет
-	   // изменить, полученный элемент
+	const T& top() const
+	{
 		if (empty())
 		{
 			throw std::underflow_error("Stack is empty!");
